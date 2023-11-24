@@ -1,3 +1,9 @@
+syntax = "proto3";
+
+option go_package = "github.com/tugberkugurlu/go-grpc-example/spec";
+
+package helloworld;
+
 message HelloRequest {
     string name = 1;
 }
@@ -7,5 +13,5 @@ message HelloReply {
 }
 
 service Greeter {
-    rpc SayHello(HelloRequest) returns (HelloReply)
+    rpc SayHello(HelloRequest) returns (HelloReply);
 }

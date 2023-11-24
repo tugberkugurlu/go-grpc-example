@@ -6,7 +6,7 @@
 	"image": "mcr.microsoft.com/devcontainers/go:1-1.21-bullseye",
 	"features": {
 		"ghcr.io/devcontainers-contrib/features/grpcurl-asdf:2": {},
-		"ghcr.io/devcontainers-contrib/features/protoc:1": {}
+		"ghcr.io/devcontainers-contrib/features/protoc-asdf:1": {}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
