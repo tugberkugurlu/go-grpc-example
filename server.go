@@ -4,12 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
-	"net"
-
 	"github.com/tugberkugurlu/go-grpc-example/spec"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/stats"
+	"log"
+	"net"
+	"reflect"
+	"sync"
+	"time"
 )
 
 var (
@@ -18,11 +21,19 @@ var (
 
 type server struct {
 	spec.UnimplementedGreeterServer
+	eo *EvenOdd
 }
 
-func (*server) SayHello(ctx context.Context, in *spec.HelloRequest) (*spec.HelloReply, error) {
-	log.Printf("received: %v", in.GetName())
-	return &spec.HelloReply{Message: "Hello " + in.GetName()}, nil
+func (s *server) SayHello(ctx context.Context, in *spec.HelloRequest) (*spec.HelloReply, error) {
+	name := in.GetName()
+	val := s.eo.Next()
+	if val%2 != 0 {
+		time.Sleep(2 * time.Second)
+	} else {
+		time.Sleep(1 * time.Second)
+	}
+	log.Printf("received: %v", name)
+	return &spec.HelloReply{Message: "Hello " + name}, nil
 }
 
 func main() {
@@ -31,11 +42,69 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+	eo := NewEvenOdd()
+	s := grpc.NewServer(grpc.StatsHandler(serverStatsHandler{}))
 	reflection.Register(s)
-	spec.RegisterGreeterServer(s, &server{})
+	spec.RegisterGreeterServer(s, &server{
+		eo: eo,
+	})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+type EvenOdd struct {
+	mu       sync.Mutex
+	nextEven bool
+}
+
+func NewEvenOdd() *EvenOdd {
+	return &EvenOdd{
+		nextEven: true,
+	}
+}
+
+func (eo *EvenOdd) Next() int {
+	eo.mu.Lock()
+	defer eo.mu.Unlock()
+	if eo.nextEven {
+		eo.nextEven = false
+		return 2
+	} else {
+		eo.nextEven = true
+		return 1
+	}
+}
+
+type serverStatsHandler struct {
+}
+
+func (s serverStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
+	log.Println("--------------------")
+	log.Println("TagRPC")
+	log.Println(fmt.Sprintf("%v", reflect.TypeOf(info)))
+	log.Println("--------------------")
+	return ctx
+}
+
+func (s serverStatsHandler) HandleRPC(ctx context.Context, stats stats.RPCStats) {
+	log.Println("--------------------")
+	log.Println("HandleRPC")
+	log.Println(fmt.Sprintf("%v", reflect.TypeOf(stats)))
+	log.Println("--------------------")
+}
+
+func (s serverStatsHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+	log.Println("--------------------")
+	log.Println("TagConn")
+	log.Println("--------------------")
+	return ctx
+}
+
+func (s serverStatsHandler) HandleConn(ctx context.Context, stats stats.ConnStats) {
+	log.Println("--------------------")
+	log.Println("HandleConn")
+	log.Println(fmt.Sprintf("%v", reflect.TypeOf(stats)))
+	log.Println("--------------------")
 }
