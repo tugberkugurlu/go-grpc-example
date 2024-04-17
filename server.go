@@ -27,6 +27,7 @@ type server struct {
 func (s *server) SayHello(ctx context.Context, in *spec.HelloRequest) (*spec.HelloReply, error) {
 	name := in.GetName()
 	val := s.eo.Next()
+	fmt.Println(val)
 	if val%2 != 0 {
 		time.Sleep(2 * time.Second)
 	} else {
@@ -43,7 +44,8 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	eo := NewEvenOdd()
-	s := grpc.NewServer(grpc.StatsHandler(serverStatsHandler{}))
+	// s := grpc.NewServer(grpc.StatsHandler(serverStatsHandler{}))
+	s := grpc.NewServer()
 	reflection.Register(s)
 	spec.RegisterGreeterServer(s, &server{
 		eo: eo,
@@ -61,7 +63,7 @@ type EvenOdd struct {
 
 func NewEvenOdd() *EvenOdd {
 	return &EvenOdd{
-		nextEven: true,
+		nextEven: false,
 	}
 }
 
